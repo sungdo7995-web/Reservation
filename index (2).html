@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>예약 시스템</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f3ef;--white:#ffffff;--gray1:#f0efe9;--gray2:#e2e1da;
+  --text:#1a1a18;--muted:#6b6b65;--hint:#a0a099;
+  --border:rgba(0,0,0,0.11);--border2:rgba(0,0,0,0.2);
+  --green:#2c5a3c;--green-light:#e7f2ea;--green-dark:#1e3d29;
+  --red:#b83030;--red-light:#fdecea;--orange:#b86800;--orange-light:#fef3e2;
+  --r:10px;--rlg:16px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+#userPage{display:block}#adminPage{display:none}
+
+.u-wrap{display:flex;flex-direction:column;align-items:center;padding:2.5rem 1rem 5rem}
+.u-header{width:100%;max-width:500px;margin-bottom:2rem}
+.u-tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--green);background:var(--green-light);padding:4px 10px;border-radius:5px;margin-bottom:10px;}
+.u-header h1{font-size:26px;font-weight:700;letter-spacing:-.4px;line-height:1.2}
+.u-header p{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.6}
+.card{background:var(--white);border-radius:var(--rlg);border:1px solid var(--border);padding:1.6rem;width:100%;max-width:500px;}
+.sec-label{font-size:10px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:var(--hint);margin-bottom:11px;}
+.tg-title{font-size:12px;font-weight:500;color:var(--muted);display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.tg-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.tg{margin-bottom:1.4rem}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+
+.slot{height:74px;border:1px solid var(--border);border-radius:var(--r);background:var(--white);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:border-color .13s,background .13s,transform .1s;position:relative;overflow:hidden;user-select:none;-webkit-tap-highlight-color:transparent;}
+.slot:active:not(.full){transform:scale(.97)}
+.slot:hover:not(.full){border-color:var(--green);background:var(--green-light)}
+.slot.sel{background:var(--green);border-color:var(--green);transform:scale(.97)}
+.slot.full{background:#f8f4f4;cursor:not-allowed;opacity:.55}
+.s-time{font-size:13px;font-weight:600;color:var(--text);letter-spacing:.2px;transition:color .13s}
+.slot.sel .s-time{color:#fff}
+.slot.full .s-time{color:var(--muted);text-decoration:line-through}
+.s-rem{font-size:10px;color:var(--hint);transition:color .13s}
+.slot.sel .s-rem{color:rgba(255,255,255,.75)}
+.s-rem.warn{color:var(--orange);font-weight:600}
+.slot.sel .s-rem.warn{color:rgba(255,210,110,.95)}
+.full-lbl{position:absolute;top:4px;right:6px;font-size:9px;font-weight:700;color:var(--red);letter-spacing:.4px;}
+.cap-track{position:absolute;bottom:0;left:0;width:100%;height:3px;background:rgba(0,0,0,.07)}
+.cap-fill{height:100%;transition:width .35s ease}
+
+.sel-banner{display:none;align-items:center;gap:8px;background:var(--green-light);border:1px solid rgba(44,90,60,.2);border-radius:var(--r);padding:11px 14px;margin-bottom:.9rem;font-size:13px;font-weight:600;color:var(--green-dark);}
+.sel-banner.on{display:flex}
+.divider{height:1px;background:var(--border);margin:1.4rem 0}
+.field{margin-bottom:.9rem}
+.field label{display:block;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--hint);margin-bottom:7px;}
+.field input{width:100%;height:46px;border:1px solid var(--border);border-radius:var(--r);background:var(--white);color:var(--text);font-family:inherit;font-size:15px;padding:0 13px;outline:none;transition:border-color .13s;-webkit-appearance:none;appearance:none;}
+.field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(44,90,60,.1)}
+.field input::placeholder{color:var(--hint)}
+.btn-main{width:100%;height:50px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:.4rem;letter-spacing:.2px;transition:background .13s,transform .1s;}
+.btn-main:hover{background:#235030}
+.btn-main:active{transform:scale(.99)}
+.btn-main:disabled{background:#aaa;cursor:not-allowed;}
+
+.success{display:none;text-align:center;padding:.8rem 0}
+.success.on{display:block}
+.ok-icon{width:60px;height:60px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;font-size:24px;}
+.ok-title{font-size:21px;font-weight:700;letter-spacing:-.3px;margin-bottom:5px}
+.ok-sub{font-size:13px;color:var(--muted);margin-bottom:1.8rem}
+.c-card{background:var(--gray1);border-radius:var(--r);padding:1.1rem;text-align:left;margin-bottom:1.4rem}
+.c-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:13px}
+.c-row+.c-row{border-top:1px solid var(--border)}
+.c-key{color:var(--muted)}.c-val{font-weight:600;color:var(--text)}
+.c-val.mono{font-family:monospace;font-size:13px}.c-val.red{color:var(--red)}
+.btn-sub{width:100%;height:46px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:14px;cursor:pointer;transition:all .13s;}
+.btn-sub:hover{border-color:var(--border2);color:var(--text);background:var(--gray1)}
+.u-footer{margin-top:1.6rem;font-size:11px;color:var(--hint);text-align:center;line-height:1.9;}
+.admin-btn{background:none;border:none;color:var(--hint);font-family:inherit;font-size:11px;cursor:pointer;opacity:.65;transition:opacity .15s;margin-top:4px;}
+.admin-btn:hover{opacity:1}
+
+/* loading overlay */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+.loading-overlay.on{display:flex}
+.spinner{width:32px;height:32px;border:3px solid var(--gray2);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;color:var(--muted)}
+
+/* realtime badge */
+.realtime-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--green-dark);background:var(--green-light);padding:3px 8px;border-radius:20px;margin-top:6px;}
+.realtime-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ADMIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--bg);}
+.login-box{background:var(--white);border:1px solid var(--border);border-radius:var(--rlg);padding:2.2rem 1.8rem;width:100%;max-width:340px;}
+.login-box h2{font-size:19px;font-weight:700;margin-bottom:5px}
+.login-box p{font-size:13px;color:var(--muted);margin-bottom:1.6rem}
+.dash-wrap{max-width:680px;margin:0 auto;padding:2rem 1rem 4rem}
+.dash-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.8rem;flex-wrap:wrap;gap:12px;}
+.dash-top h2{font-size:21px;font-weight:700;letter-spacing:-.3px}
+.dash-top p{font-size:12px;color:var(--muted);margin-top:4px}
+.dash-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn-sm{height:34px;padding:0 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--white);color:var(--text);transition:all .13s;white-space:nowrap;}
+.btn-sm:hover{background:var(--gray1);border-color:var(--border2)}
+.btn-sm.red-btn{color:var(--red);border-color:rgba(184,48,48,.22);background:var(--red-light)}
+.btn-sm.red-btn:hover{background:#f9d5d5}
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.6rem}
+.sum-card{background:var(--white);border:1px solid var(--border);border-radius:var(--rlg);padding:1rem 1.1rem}
+.sum-card.accent{background:var(--green);border-color:var(--green)}
+.sum-lbl{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--hint);margin-bottom:5px}
+.sum-card.accent .sum-lbl{color:rgba(255,255,255,.6)}
+.sum-val{font-size:26px;font-weight:700;letter-spacing:-.5px;color:var(--text)}
+.sum-card.accent .sum-val{color:#fff}
+.sum-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.sum-card.accent .sum-sub{color:rgba(255,255,255,.55)}
+.ssec{margin-bottom:1.4rem}
+.ssec-title{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--hint);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:9px;}
+.srow{background:var(--white);border:1px solid var(--border);border-radius:var(--r);margin-bottom:7px;overflow:hidden}
+.srow-hd{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;transition:background .13s;}
+.srow-hd:hover{background:var(--gray1)}
+.srow-time{font-size:12px;font-weight:600;min-width:108px;color:var(--text);letter-spacing:.1px}
+.srow-bar-w{flex:1;height:7px;background:var(--gray2);border-radius:4px;overflow:hidden}
+.srow-bar{height:100%;border-radius:4px;transition:width .35s}
+.srow-cnt{font-size:12px;font-weight:600;min-width:44px;text-align:right;color:var(--muted)}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:.4px;white-space:nowrap}
+.badge.open{background:var(--green-light);color:var(--green-dark)}
+.badge.warn{background:var(--orange-light);color:var(--orange)}
+.badge.full{background:var(--red-light);color:var(--red)}
+.badge.none{background:var(--gray1);color:var(--hint)}
+.srow-body{display:none;border-top:1px solid var(--border);padding:0 14px}
+.srow-body.open{display:block}
+.no-rsv{padding:13px 0;font-size:13px;color:var(--hint);text-align:center}
+table.rtbl{width:100%;border-collapse:collapse}
+table.rtbl th{font-size:10px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--hint);padding:9px 6px 6px;text-align:left;border-bottom:1px solid var(--border);}
+table.rtbl td{font-size:13px;padding:9px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.rtbl tr:last-child td{border-bottom:none}
+.td-name{font-weight:600}.td-phone{font-family:monospace;font-size:12px;color:var(--muted)}.td-ts{font-size:11px;color:var(--hint)}
+.del-btn{background:none;border:none;color:var(--hint);cursor:pointer;font-size:12px;padding:4px 8px;border-radius:6px;transition:all .13s;font-family:inherit;}
+.del-btn:hover{color:var(--red);background:var(--red-light)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:200;align-items:center;justify-content:center;padding:1rem;}
+.overlay.on{display:flex}
+.modal{background:var(--white);border-radius:var(--rlg);padding:1.8rem;width:100%;max-width:340px;}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:7px}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:1.4rem;line-height:1.6}
+.modal-btns{display:flex;gap:8px}
+.modal-btns .btn-sm{flex:1;height:40px;display:flex;align-items:center;justify-content:center}
+.toast{position:fixed;bottom:1.8rem;left:50%;transform:translateX(-50%);background:#1a1a18;color:#fff;font-size:13px;padding:11px 18px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s;z-index:500;}
+.toast.on{opacity:1}
+@media(max-width:400px){.grid{grid-template-columns:repeat(2,1fr)}.sum-grid{grid-template-columns:repeat(2,1fr)}.srow-time{min-width:80px;font-size:11px}.dash-top{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOv">
+  <div class="spinner"></div>
+  <div class="loading-txt" id="loadingTxt">데이터 불러오는 중...</div>
+</div>
+
+<!-- ======== USER PAGE ======== -->
+<div id="userPage">
+<div class="u-wrap">
+  <div class="u-header">
+    <span class="u-tag">예약 시스템</span>
+    <h1>시간 예약</h1>
+    <p>원하시는 시간대를 선택하고<br>이름을 입력해 주세요.</p>
+    <div class="realtime-badge"><span class="realtime-dot"></span>실시간 연동</div>
+  </div>
+  <div class="card">
+    <div id="formView">
+      <div class="sec-label">시간 선택</div>
+      <div class="tg">
+        <div class="tg-title">오전</div>
+        <div class="grid" id="amGrid"></div>
+      </div>
+      <div class="tg">
+        <div class="tg-title">오후</div>
+        <div class="grid" id="pmGrid"></div>
+      </div>
+      <div class="sel-banner" id="selBanner">
+        <span>🕐</span><span id="selTxt"></span>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>이름</label>
+        <input type="text" id="nameIn" placeholder="홍길동" maxlength="20">
+      </div>
+      <div class="field">
+        <label>연락처 (선택)</label>
+        <input type="tel" id="phoneIn" placeholder="010-0000-0000" maxlength="13">
+      </div>
+      <button class="btn-main" id="submitBtn" onclick="doSubmit()">예약 확인하기</button>
+    </div>
+    <div class="success" id="doneView">
+      <div class="ok-icon">✓</div>
+      <div class="ok-title">예약 완료!</div>
+      <div class="ok-sub" id="doneSub"></div>
+      <div class="c-card" id="doneCard"></div>
+      <button class="btn-sub" onclick="doReset()">다른 시간 예약하기</button>
+    </div>
+  </div>
+  <div class="u-footer">
+    타임당 최대 6명 · 마감 시 자동 비활성화<br>
+    <button class="admin-btn" onclick="goAdmin()">관리자 페이지 →</button>
+  </div>
+</div>
+</div>
+
+<!-- ======== ADMIN PAGE ======== -->
+<div id="adminPage">
+  <div id="loginView" class="login-wrap">
+    <div class="login-box">
+      <h2>관리자 로그인</h2>
+      <p>관리자 비밀번호를 입력해 주세요.</p>
+      <div class="field">
+        <label>비밀번호</label>
+        <input type="password" id="pwIn" placeholder="비밀번호" onkeydown="if(event.key==='Enter')tryLogin()">
+      </div>
+      <button class="btn-main" onclick="tryLogin()">로그인</button>
+      <div style="text-align:center;margin-top:1rem">
+        <button class="admin-btn" onclick="goUser()">← 예약 페이지로</button>
+      </div>
+    </div>
+  </div>
+  <div id="dashView" style="display:none;background:var(--bg);min-height:100vh">
+    <div class="dash-wrap">
+      <div class="dash-top">
+        <div>
+          <h2>예약 현황</h2>
+          <p id="dashDate"></p>
+          <div class="realtime-badge" style="margin-top:6px"><span class="realtime-dot"></span>실시간 자동 반영</div>
+        </div>
+        <div class="dash-btns">
+          <button class="btn-sm red-btn" onclick="openReset()">전체 초기화</button>
+          <button class="btn-sm" onclick="doLogout()">로그아웃</button>
+        </div>
+      </div>
+      <div class="sum-grid" id="sumGrid"></div>
+      <div class="ssec">
+        <div class="ssec-title">오전 예약 현황</div>
+        <div id="dashAm"></div>
+      </div>
+      <div class="ssec">
+        <div class="ssec-title">오후 예약 현황</div>
+        <div id="dashPm"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="resetOv" onclick="if(event.target===this)closeReset()">
+  <div class="modal">
+    <h3>전체 초기화</h3>
+    <p>모든 예약 데이터가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</p>
+    <div class="modal-btns">
+      <button class="btn-sm" onclick="closeReset()">취소</button>
+      <button class="btn-sm red-btn" onclick="doResetAll()">초기화</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="delOv" onclick="if(event.target===this)closeDel()">
+  <div class="modal">
+    <h3>예약 삭제</h3>
+    <p id="delMsg"></p>
+    <div class="modal-btns">
+      <button class="btn-sm" onclick="closeDel()">취소</button>
+      <button class="btn-sm red-btn" onclick="doDel()">삭제</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, push, remove, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAMq1btJz0nRKfsIW82P3a-fcLhBa2aRoo",
+  authDomain: "making-a-flower-crown.firebaseapp.com",
+  databaseURL: "https://making-a-flower-crown-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "making-a-flower-crown",
+  storageBucket: "making-a-flower-crown.firebasestorage.app",
+  messagingSenderId: "982547053712",
+  appId: "1:982547053712:web:7fe1080781d44a72d5ac15"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const PW = '0413';
+const MAX = 6;
+
+function makeSlots(sh,sm,eh,em){
+  const out=[];let h=sh,m=sm;
+  while(h<eh||(h===eh&&m<=em)){
+    const hh=String(h).padStart(2,'0'),mm=String(m).padStart(2,'0');
+    const t=h*60+m+30,eh2=Math.floor(t/60),em2=t%60;
+    out.push({key:`${hh}${mm}`,time:`${hh}:${mm}`,label:`${hh}:${mm} – ${String(eh2).padStart(2,'0')}:${String(em2).padStart(2,'0')}`});
+    m+=30;if(m>=60){h++;m-=60;}
+  }
+  return out;
+}
+const AM=makeSlots(10,0,11,30);
+const PM=makeSlots(14,0,16,30);
+const ALL=[...AM,...PM];
+
+// 실시간 데이터 저장소
+let liveData = {};
+let picked = null;
+
+// 로딩
+function showLoading(txt){
+  document.getElementById('loadingTxt').textContent = txt||'처리 중...';
+  document.getElementById('loadingOv').classList.add('on');
+}
+function hideLoading(){ document.getElementById('loadingOv').classList.remove('on'); }
+
+// Firebase 실시간 리스닝 시작
+showLoading('데이터 불러오는 중...');
+const rootRef = ref(db, 'reservations');
+onValue(rootRef, (snapshot) => {
+  liveData = snapshot.val() || {};
+  hideLoading();
+  renderUser();
+  // 관리자 대시보드가 열려 있으면 자동 갱신
+  if(document.getElementById('dashView').style.display !== 'none'){
+    renderDash();
+  }
+});
+
+// ── USER ──────────────────────────────
+function renderSlot(s, container){
+  const slotEntries = liveData[s.key] ? Object.values(liveData[s.key]) : [];
+  const c = slotEntries.length;
+  const full = c >= MAX, rem = MAX - c, pct = Math.round(c/MAX*100);
+  const warn = !full && rem <= 2;
+  const barColor = full ? 'var(--red)' : pct>=67 ? 'var(--orange)' : 'var(--green)';
+
+  const d = document.createElement('div');
+  d.className = 'slot' + (full ? ' full' : '');
+  d.id = 'sl' + s.key;
+  d.innerHTML = `<span class="s-time">${s.time}</span><span class="s-rem${warn?' warn':''}">${full?'마감':'잔여 '+rem+'명'}</span>${full?'<span class="full-lbl">FULL</span>':''}<div class="cap-track"><div class="cap-fill" style="width:${pct}%;background:${barColor}"></div></div>`;
+  if(!full) d.onclick = () => pick(d, s);
+  container.appendChild(d);
+}
+
+window.renderUser = function(){
+  document.getElementById('amGrid').innerHTML='';
+  document.getElementById('pmGrid').innerHTML='';
+  AM.forEach(s => renderSlot(s, document.getElementById('amGrid')));
+  PM.forEach(s => renderSlot(s, document.getElementById('pmGrid')));
+  // 선택된 슬롯이 마감됐으면 해제
+  if(picked){
+    const entries = liveData[picked.key] ? Object.values(liveData[picked.key]) : [];
+    if(entries.length >= MAX){
+      picked = null;
+      document.getElementById('selBanner').classList.remove('on');
+      toast('선택하신 시간이 마감되었습니다');
+    }
+  }
+}
+
+function pick(el, s){
+  document.querySelectorAll('.slot.sel').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel'); picked = s;
+  document.getElementById('selTxt').textContent = s.label + ' 선택됨';
+  document.getElementById('selBanner').classList.add('on');
+}
+
+window.doSubmit = async function(){
+  if(!picked){ toast('시간대를 먼저 선택해 주세요'); return; }
+  const entries = liveData[picked.key] ? Object.values(liveData[picked.key]) : [];
+  if(entries.length >= MAX){ toast('해당 시간은 이미 마감되었습니다'); renderUser(); return; }
+  const name = document.getElementById('nameIn').value.trim();
+  if(!name){ toast('이름을 입력해 주세요'); return; }
+  const phone = document.getElementById('phoneIn').value.trim();
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  showLoading('예약 중...');
+
+  try {
+    const slotRef = ref(db, `reservations/${picked.key}`);
+    const now = new Date();
+    const ts = now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    await push(slotRef, { name, phone: phone||'', ts, createdAt: Date.now() });
+
+    const rem = MAX - (entries.length + 1);
+    document.getElementById('doneSub').textContent = name + '님, 예약이 완료되었습니다.';
+    document.getElementById('doneCard').innerHTML = `
+      <div class="c-row"><span class="c-key">예약 시간</span><span class="c-val">${picked.label}</span></div>
+      <div class="c-row"><span class="c-key">이름</span><span class="c-val">${name}</span></div>
+      ${phone?`<div class="c-row"><span class="c-key">연락처</span><span class="c-val mono">${phone}</span></div>`:''}
+      <div class="c-row"><span class="c-key">잔여 인원</span><span class="c-val${rem<=0?' red':''}">${rem>0?rem+'명':'마감'}</span></div>`;
+    document.getElementById('formView').style.display = 'none';
+    document.getElementById('doneView').classList.add('on');
+  } catch(e) {
+    toast('예약 중 오류가 발생했습니다. 다시 시도해주세요.');
+  }
+  hideLoading();
+  btn.disabled = false;
+}
+
+window.doReset = function(){
+  picked = null;
+  document.getElementById('nameIn').value = '';
+  document.getElementById('phoneIn').value = '';
+  document.getElementById('selBanner').classList.remove('on');
+  document.getElementById('formView').style.display = 'block';
+  document.getElementById('doneView').classList.remove('on');
+}
+
+// ── ADMIN ──────────────────────────────
+window.goAdmin = function(){
+  document.getElementById('userPage').style.display = 'none';
+  document.getElementById('adminPage').style.display = 'block';
+  document.getElementById('loginView').style.display = 'flex';
+  document.getElementById('dashView').style.display = 'none';
+  document.getElementById('pwIn').value = '';
+  setTimeout(()=>document.getElementById('pwIn').focus(), 100);
+}
+
+window.tryLogin = function(){
+  if(document.getElementById('pwIn').value === PW){
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('dashView').style.display = 'block';
+    renderDash();
+  } else {
+    toast('비밀번호가 올바르지 않습니다');
+    document.getElementById('pwIn').value = '';
+  }
+}
+
+window.doLogout = function(){
+  document.getElementById('loginView').style.display = 'flex';
+  document.getElementById('dashView').style.display = 'none';
+}
+
+window.goUser = function(){
+  document.getElementById('adminPage').style.display = 'none';
+  document.getElementById('userPage').style.display = 'block';
+}
+
+function renderDash(){
+  const now = new Date();
+  document.getElementById('dashDate').textContent =
+    now.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'}) +
+    ' · ' + now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) + ' 기준';
+
+  let total = 0, fullN = 0;
+  ALL.forEach(s => {
+    const c = liveData[s.key] ? Object.values(liveData[s.key]).length : 0;
+    total += c; if(c >= MAX) fullN++;
+  });
+  const cap = ALL.length * MAX;
+  document.getElementById('sumGrid').innerHTML = `
+    <div class="sum-card accent"><div class="sum-lbl">총 예약</div><div class="sum-val">${total}</div><div class="sum-sub">전체 정원 ${cap}명</div></div>
+    <div class="sum-card"><div class="sum-lbl">잔여</div><div class="sum-val">${cap-total}</div><div class="sum-sub">남은 자리</div></div>
+    <div class="sum-card"><div class="sum-lbl">마감 타임</div><div class="sum-val">${fullN}</div><div class="sum-sub">총 ${ALL.length}개 중</div></div>`;
+  renderDashSlots(AM, 'dashAm');
+  renderDashSlots(PM, 'dashPm');
+}
+
+function renderDashSlots(slots, cid){
+  const con = document.getElementById(cid); con.innerHTML = '';
+  slots.forEach(s => {
+    const entries = liveData[s.key] ? Object.entries(liveData[s.key]) : [];
+    const c = entries.length;
+    const pct = Math.round(c/MAX*100);
+    const full=c>=MAX, warn=!full&&c>=MAX-2, empty=c===0;
+    const barColor = full?'var(--red)':warn?'var(--orange)':'var(--green)';
+    const bcls = full?'full':warn?'warn':empty?'none':'open';
+    const btxt = full?'FULL':warn?'마감 임박':empty?'예약 없음':'예약 중';
+
+    const row = document.createElement('div');
+    row.className = 'srow';
+    row.innerHTML = `
+      <div class="srow-hd" onclick="toggleRow('rb${s.key}')">
+        <span class="srow-time">${s.label}</span>
+        <div class="srow-bar-w"><div class="srow-bar" style="width:${pct}%;background:${barColor}"></div></div>
+        <span class="srow-cnt">${c} / ${MAX}</span>
+        <span class="badge ${bcls}">${btxt}</span>
+      </div>
+      <div class="srow-body" id="rb${s.key}">
+        ${c===0 ? '<div class="no-rsv">예약자가 없습니다</div>' :
+          `<table class="rtbl"><thead><tr><th>#</th><th>이름</th><th>연락처</th><th>등록시각</th><th></th></tr></thead><tbody>
+          ${entries.map(([fbKey, r], i) => `
+            <tr>
+              <td style="color:var(--hint)">${i+1}</td>
+              <td class="td-name">${r.name}</td>
+              <td class="td-phone">${r.phone||'—'}</td>
+              <td class="td-ts">${r.ts}</td>
+              <td><button class="del-btn" onclick="openDel('${s.key}','${fbKey}','${r.name.replace(/'/g,"\\'")}','${s.label}')">삭제</button></td>
+            </tr>`).join('')}
+          </tbody></table>`}
+      </div>`;
+    con.appendChild(row);
+  });
+}
+
+window.toggleRow = function(id){ document.getElementById(id).classList.toggle('open'); }
+
+window.openReset = function(){ document.getElementById('resetOv').classList.add('on'); }
+window.closeReset = function(){ document.getElementById('resetOv').classList.remove('on'); }
+window.doResetAll = async function(){
+  showLoading('초기화 중...');
+  await set(ref(db, 'reservations'), null);
+  closeReset(); hideLoading(); toast('전체 초기화 완료');
+}
+
+let pendDel = null;
+window.openDel = function(slotKey, fbKey, name, label){
+  pendDel = {slotKey, fbKey};
+  document.getElementById('delMsg').textContent = `${label} 타임에서 "${name}"님의 예약을 삭제합니다.`;
+  document.getElementById('delOv').classList.add('on');
+}
+window.closeDel = function(){ document.getElementById('delOv').classList.remove('on'); pendDel=null; }
+window.doDel = async function(){
+  if(!pendDel) return;
+  showLoading('삭제 중...');
+  await remove(ref(db, `reservations/${pendDel.slotKey}/${pendDel.fbKey}`));
+  closeDel(); hideLoading(); toast('삭제되었습니다');
+}
+
+window.toast = function(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('on'), 2200);
+}
+
+document.getElementById('phoneIn').addEventListener('input', function(){
+  let v = this.value.replace(/\D/g,'');
+  if(v.length<=3) this.value=v;
+  else if(v.length<=7) this.value=v.slice(0,3)+'-'+v.slice(3);
+  else this.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);
+});
+
+</script>
+</body>
+</html>
